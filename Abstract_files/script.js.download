@@ -1,0 +1,423 @@
+
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+'use strict';
+
+hljs.initHighlightingOnLoad();
+Notification.init();
+  
+  
+var HC_SETTINGS = {
+  css: {
+    activeClass: 'is-active',
+    hiddenClass: 'is-hidden',
+    topbarHiddenClass: 'topbar--hidden',
+    topbarFixedClass: 'topbar--fixed'
+  }
+};
+  
+var optionsAPI = {
+  /* required */
+  content: [
+  // what we want to get and which params
+  {
+    name: 'categories',
+    fields: ['id', 'position', 'name']
+  }, {
+    name: 'sections',
+    fields: ['id', 'position', 'name', 'category_id']
+  }, {
+    name: 'articles',
+    fields: ['id', 'position', 'title', 'label_names', 'section_id']
+  }]
+};
+
+var options = {
+  el: '.article-nav', // # => id, . => class - where we paste buttons
+  /* optional params */
+  className: 'prevnext', // prevnext class by default - main class for buttons
+  classNameBtn: '' // class for Btns, stroke type -> 'btn btn--primary' class by default
+};
+
+// var REDIRECTS = {
+//   "360002607151": "360016367531-Manage-Permissions-and-Access", //#change-roles-or-seats",
+//   "360001130331": "360016101911-Create-a-Project", //#create-a-project",
+//   "360001124792": "360016306352-Send-an-Invitation", //#who-to-invite",
+//   "360001409671": "360016306352-Send-an-Invitation", //#send-a-new-invitation",
+//   "360001142431": "360016306352-Send-an-Invitation", //#send-a-new-invitation",
+//   "360001118452": "360016306352-Send-an-Invitation", //#send-a-new-invitation",
+//   "360001392832": "360016205132-Manage-Projects",
+//   "360001125412": "360016205132-Manage-Projects", //#archive-a-project",
+//   "360001130371": "360016101911-Create-a-Project", //#types-of-projects",
+//   "360001489872": "360016205132-Manage-Projects", //#transfer-a-project",
+//   "360001409831": "360016199232-Commit-and-Merge",
+//   "360001409551": "360016159032-Create-a-Branch",
+//   "360001125352": "360016199232-Commit-and-Merge", //#merge-work",
+//   "360001149531": "360016199232-Commit-and-Merge", //#commit-work",
+//   "360001149511": "360016159032-Create-a-Branch",
+//   "360001409911": "360016101911-Create-a-Project", //#import-files",
+//   "360001409591": "360016101911-Create-a-Project", //#supported-file-types",
+//   "360001392672": "360016370931-Build-a-Library",
+//   "360001409531": "360015884812-Manage-Files", //#replace-a-file",
+//   "360001392632": "360016370931-Build-a-Library", //#import-a-library",
+//   "360001125572": "360016370931-Build-a-Library", //#virtual-pages",
+//   "360001125312": "360015884812-Manage-Files", //#backup-files",
+//   "360001410371": "360016419371-Using-Sketch-and-Abstract", //#rearrange-artboards",
+//   "360001393212": "360016199232-Commit-and-Merge", //#restore-a-commit",
+//   "360007512451": "360016261932-Review-Requests",
+//   "360004927992": "360016262292-Inspect-with-Abstract",
+//   "360004521931": "360016261932-Review-Requests",
+//   "360003860952": "360016478171-Comments-and-Annotations", //#replies",
+//   "360001125432": "360016478171-Comments-and-Annotations", //#comments-and-annotations",
+//   "360001149551": "360016511731-Collections",
+//   "360006865351": "360016525651-Access-Your-Account", //#remove-personal-data",
+//   "360003882951": "360016523411-Manage-Your-Settings", //#notifications",
+//   "360006666112": "360016367531-Manage-Permissions-and-Access", //#change-roles-or-seats",
+//   "360004155432": "360016370712-Manage-an-Organization", //#organization-settings",
+//   "360001410331": "360016371732-Manage-Billing-and-Plans", //#billing-cycles",
+//   "360001409891": "360016370712-Manage-an-Organization",
+//   "360001118992": "360016367531-Manage-Permissions-and-Access",
+//   "360001820452": "360016371732-Manage-Billing-and-Plans",
+//   "360001820432": "360016371732-Manage-Billing-and-Plans", //#update-a-subscription",
+//   "360001490072": "360016371732-Manage-Billing-and-Plans", //#update-a-subscription",
+//   "360001119512": "360016370712-Manage-an-Organization", //#integrate-slack",
+// };
+  
+var EXTERNAL_REDIRECTS = {
+  "360001410011": "https://www.goabstract.com/help/commits/a-guide-to-commits/",
+  "360001410031": "https://www.goabstract.com/help/merge-master/a-guide-to-merging/",
+  "360001176971": "https://www.goabstract.com/help/projects/syncing-trouble/",
+  "360018664171": "https://www.goabstract.com/help/billing-seats/plans-features/",
+  "360004111012": "https://www.goabstract.com/help/legal-security/sub-processors/",
+  "360020737592": "https://www.goabstract.com/help/other/sdk/",
+  "360016367912": "https://www.goabstract.com/help/your-organization/access-restrictions-and-network-settings/",
+  "360016525651": "https://www.goabstract.com/help/your-account/",
+  "360020991411": "https://www.goabstract.com/help/projects/archive-delete-project/",
+  "360016478171": "https://www.goabstract.com/help/collaboration/comments-annotations/",
+  "360016199232": "https://www.goabstract.com/help/commits/",
+  "360016159032": "https://www.goabstract.com/help/branches/",
+  "360016511731": "https://www.goabstract.com/help/collaboration/collections/",
+  "360016370931": "https://www.goabstract.com/help/libraries/add-library/",
+  "360016101911": "https://www.goabstract.com/help/projects/",
+  "360020569692": "https://www.goabstract.com/help/libraries/library-trouble/",
+  "360004198391": "https://www.goabstract.com/help/legal-security/gdpr/",
+  "360018352811": "https://www.goabstract.com/help/getting-started/",
+  "360001142231": "https://www.goabstract.com/help/other/glossary/",
+  "360016262292": "https://www.goabstract.com/help/collaboration/inspect/",
+  "360016301632": "https://www.goabstract.com/help/your-organization/join-organization/",
+  "360016370712": "https://www.goabstract.com/help/your-organization/",
+  "360016371732": "https://www.goabstract.com/help/billing-seats/",
+  "360015884812": "https://www.goabstract.com/help/projects/add-files/",
+  "360016367531": "https://www.goabstract.com/help/your-organization/manage-permissions-and-access/",
+  "360016205132": "https://www.goabstract.com/help/projects/sync-project/",
+  "360016523411": "https://www.goabstract.com/help/your-account/change-account-settings/",
+  "360020172612": "https://www.goabstract.com/help/merge-master/",
+  "360016261932": "https://www.goabstract.com/help/collaboration/request-design-review/",
+  "360004427432": "https://www.goabstract.com/help/branches/branch-trouble/",
+  "360016306352": "https://www.goabstract.com/help/your-organization/send-invite/",
+  "360020173972": "https://www.goabstract.com/help/commits/commit-trouble/#bug-report/",
+  "360020806352": "https://www.goabstract.com/help/your-organization/slack-integration/",
+  "360001409991": "https://www.goabstract.com/help/other/the-abstract-design-workflow/",
+  "360020980751": "https://www.goabstract.com/help/projects/transfer-project/",
+  "360020547111": "https://www.goabstract.com/help/billing-seats/upgrade-plan/",
+  "360016419371": "https://www.goabstract.com/help/plugin/",
+  "360001118452": "https://www.goabstract.com/help/your-organization/send-invite/",
+  "360001118992": "https://www.goabstract.com/help/your-organization/manage-permissions-and-access/",
+  "360001119512": "https://www.goabstract.com/help/your-organization/",
+  "360001124792": "https://www.goabstract.com/help/your-organization/send-invite/",
+  "360001125312": "https://www.goabstract.com/help/projects/add-files/",
+  "360001125352": "https://www.goabstract.com/help/commits/",
+  "360001125412": "https://www.goabstract.com/help/projects/sync-project/",
+  "360001125432": "https://www.goabstract.com/help/commits/",
+  "360001125572": "https://www.goabstract.com/help/other/virtual-pages/",
+  "360001130331": "https://www.goabstract.com/help/projects/",
+  "360001130371": "https://www.goabstract.com/help/projects/",
+  "360001142431": "https://www.goabstract.com/help/your-organization/send-invite/",
+  "360001149511": "https://www.goabstract.com/help/branches/",
+  "360001149531": "https://www.goabstract.com/help/commits/",
+  "360001149551": "https://www.goabstract.com/help/collaboration/collections/",
+  "360001392632": "https://www.goabstract.com/help/libraries/add-library/",
+  "360001392672": "https://www.goabstract.com/help/libraries/add-library/",
+  "360001392832": "https://www.goabstract.com/help/projects/sync-project/",
+  "360001393212": "https://www.goabstract.com/help/commits/",
+  "360001409531": "https://www.goabstract.com/help/projects/add-files/",
+  "360001409551": "https://www.goabstract.com/help/branches/",
+  "360001409591": "https://www.goabstract.com/help/projects/",
+  "360001409671": "https://www.goabstract.com/help/your-organization/send-invite/",
+  "360001409831": "https://www.goabstract.com/help/commits/",
+  "360001409891": "https://www.goabstract.com/help/your-organization/",
+  "360001409911": "https://www.goabstract.com/help/projects/",
+  "360001410331": "https://www.goabstract.com/help/billing-seats/",
+  "360001410371": "https://www.goabstract.com/help/plugin/",
+  "360001489872": "https://www.goabstract.com/help/projects/sync-project/",
+  "360001490072": "https://www.goabstract.com/help/billing-seats/change-cancel-subscription/",
+  "360001820432": "https://www.goabstract.com/help/billing-seats/",
+  "360001820452": "https://www.goabstract.com/help/billing-seats/",
+  "360001841571": "https://www.goabstract.com/help/billing-seats/",
+  "360002607151": "https://www.goabstract.com/help/your-organization/manage-permissions-and-access/",
+  "360003860952": "https://www.goabstract.com/help/collaboration/comments-annotations/",
+  "360003882951": "https://www.goabstract.com/help/your-account/change-account-settings/",
+  "360004155432": "https://www.goabstract.com/help/your-organization/delete-organization/",
+  "360004521931": "https://www.goabstract.com/help/collaboration/request-design-review/",
+  "360004927992": "https://www.goabstract.com/help/collaboration/inspect/",
+  "360006666112": "https://www.goabstract.com/help/your-organization/manage-permissions-and-access/",
+  "360006865351": "https://www.goabstract.com/help/your-account/delete-account/",
+  "360007070152": "https://www.goabstract.com/help/other/keyboard-shortcuts/",
+  "360007512451": "https://www.goabstract.com/help/",
+  "360020512292": "https://www.goabstract.com/release-notes/",
+  "360018669251": "https://www.goabstract.com/release-notes/",
+  "360016753471": "https://www.goabstract.com/release-notes/",
+  "360016309311": "https://www.goabstract.com/release-notes/",
+  "360015568212": "https://www.goabstract.com/release-notes/",
+  "360013604011": "https://www.goabstract.com/release-notes/",
+  "360007813071": "https://www.goabstract.com/release-notes/",
+  "360007812251": "https://www.goabstract.com/release-notes/",
+  "360007614492": "https://www.goabstract.com/release-notes/",
+  "360007085891": "https://www.goabstract.com/release-notes/",
+  "360004987511": "https://www.goabstract.com/release-notes/",
+  "360004534452": "https://www.goabstract.com/release-notes/",
+  "360003861032": "https://www.goabstract.com/release-notes/",
+  "360003883171": "https://www.goabstract.com/release-notes/",
+  "360002563092": "https://www.goabstract.com/release-notes/",
+  "360002563052": "https://www.goabstract.com/release-notes/",
+  "360002580891": "https://www.goabstract.com/release-notes/",
+  "360002580831": "https://www.goabstract.com/release-notes/",
+  "360002562912": "https://www.goabstract.com/release-notes/",
+  "360002562932": "https://www.goabstract.com/release-notes/",
+  "360001119372": "https://www.goabstract.com/release-notes/"
+}
+  
+
+
+  
+$(function () {   
+  if(window.location.href=="https://help.abstract.com/hc/en-us"){
+  $('.search-box-desktop').hide();
+}
+  
+  if(window.location.href=="https://help.abstract.com/hc/en-us/"){
+  $('.search-box-desktop').hide();
+}
+  if(window.location.href.indexOf("https://help.abstract.com/hc/en-us/search") > -1){
+  $('.search-box-desktop').hide();
+}
+  
+  var $window = $(window);
+  var $topbar = $('[data-topbar]');
+  var topbarHeight = parseInt($topbar.height());
+
+  
+
+  var bindEffects = function bindEffects() {
+    var scrolled = $window.scrollTop();
+/*
+    if ($('.notifications').length > 0) {
+      if (scrolled > topbarHeight && scrolled < topbarHeight * 10.5) {
+        $topbar.addClass(HC_SETTINGS.css.topbarHiddenClass);
+      } else {
+        $topbar.removeClass(HC_SETTINGS.css.topbarHiddenClass).removeClass(HC_SETTINGS.css.topbarFixedClass);
+      }
+
+      if (scrolled > topbarHeight * 10.5) {
+        $topbar.removeClass(HC_SETTINGS.css.topbarHiddenClass).addClass(HC_SETTINGS.css.topbarFixedClass);
+      }
+    } else {
+      if (scrolled > topbarHeight && scrolled < topbarHeight * 1.7) {
+        $topbar.addClass(HC_SETTINGS.css.topbarHiddenClass);
+      } else {
+        $topbar.removeClass(HC_SETTINGS.css.topbarHiddenClass).removeClass(HC_SETTINGS.css.topbarFixedClass);
+      }
+
+      if (scrolled > topbarHeight * 1.7) {
+        $topbar.removeClass(HC_SETTINGS.css.topbarHiddenClass).addClass(HC_SETTINGS.css.topbarFixedClass);
+      }
+    }*/
+  };
+    
+  // Redirect old articles to new ones
+  // this is a horrible hack, please forgive
+  $(document).on("ready", () => {
+    // for (var oldId in REDIRECTS){
+    //  if (window.location.href.indexOf(oldId) > -1){
+    //    $(".error-header").text("Loading…").show();
+    //    window.location.href = 'https://support.goabstract.com/hc/en-us/articles/' + REDIRECTS[oldId];
+    //  }
+    // };
+    
+    for (var oldId in EXTERNAL_REDIRECTS){
+     if (window.location.href.indexOf(oldId) > -1){
+       $(".article-page").css({opacity: 0.3});
+       $(".hero-unit__title").text("Loading…").show();
+       window.location.href = EXTERNAL_REDIRECTS[oldId];
+     }
+    };
+  });
+
+  $window.on('scroll.theme', bindEffects);
+
+  if ($('[data-hero-unit="large"]').length === 0) {
+    $('[data-menu]').children('[data-toggle-search]').removeClass('hidden');
+  }
+
+  var $searchBarMobile = $('[data-search-mobile]');
+  var $closeButton = $('<button />', {
+    'class': 'btn btn--default btn--search-topbar-close',
+    'data-toggle-search': 'true',
+    html: $('<span />', { 'class': 'fa fa-close' })
+  });
+
+  $searchBarMobile.find('.search-box').append($closeButton);
+
+  $(document).on('click', '[data-toggle-menu]', function () {
+    $(this).toggleClass('tcon-transform');
+    $('[data-menu]').toggle();
+    $topbar.toggleClass('topbar--opened');
+  });
+
+  $(document).on('click', '[data-toggle-search]', function () {
+    $searchBarMobile.toggleClass('search-box--mobile-active');
+  });
+
+  // Social share popups
+  $('.share a').click(function (e) {
+    e.preventDefault();
+    window.open(this.href, '', 'height = 500, width = 500');
+  });
+
+  // Toggle the share dropdown in communities
+  $('.share-label').on('click', function (e) {
+    e.stopPropagation();
+    var isSelected = this.getAttribute('aria-selected') == 'true';
+    this.setAttribute('aria-selected', !isSelected);
+    $('.share-label').not(this).attr('aria-selected', 'false');
+  });
+
+  $(document).on('click', function () {
+    $('.share-label').attr('aria-selected', 'false');
+  });
+
+  // Submit search on select change
+  $('#request-status-select, #request-organization-select').on('change', function () {
+    search();
+  });
+
+  // Submit search on input enter
+  $('#quick-search').on('keypress', function (e) {
+    if (e.which === 13) {
+      search();
+    }
+  });
+
+  function search() {
+    window.location.search = $.param({
+      query: $('#quick-search').val(),
+      status: $('#request-status-select').val(),
+      organization_id: $('#request-organization-select').val()
+    });
+  }
+
+  $('.image-with-lightbox').magnificPopup({
+    type: 'image',
+    closeOnContentClick: true,
+    closeBtnInside: false,
+    fixedContentPos: true,
+    mainClass: 'mfp-with-zoom', // class to remove default margin from left and right side
+    image: {
+      verticalFit: true
+    },
+    zoom: {
+      enabled: true,
+      duration: 300 // don't foget to change the duration also in CSS
+    }
+  });
+
+  $('.image-with-video-icon').magnificPopup({
+    disableOn: 700,
+    type: 'iframe',
+    mainClass: 'mfp-fade',
+    removalDelay: 160,
+    preloader: false,
+    fixedContentPos: false
+  });
+
+  $('.accordion__item-title').on('click', function () {
+    var $title = $(this);
+    $title.toggleClass('accordion__item-title--active');
+    $title.parents('.accordion__item').find('.accordion__item-content').slideToggle();
+  });
+
+  $('.tabs-link').click(function (e) {
+    e.preventDefault();
+    var $link = $(this);
+    var tabIndex = $link.index();
+    var $tab = $link.parents('.tabs').find('.tab').eq(tabIndex);
+    $link.addClass(HC_SETTINGS.css.activeClass).siblings().removeClass(HC_SETTINGS.css.activeClass);
+    $tab.removeClass(HC_SETTINGS.css.hiddenClass).siblings('.tab').addClass(HC_SETTINGS.css.hiddenClass);
+  });
+
+  // Fix animated icons
+  $('.fa-spin').empty();
+  $('[data-asynchtml-resource]').removeAttr('data-asynchtml-resource');
+
+  $("img.custom-block__image").each(function () {
+    var $img = $(this);
+    var imgID = $img.attr("id");
+    var imgClass = $img.attr("class");
+    var imgURL = $img.attr("src") + "?reset";
+
+    $.get(imgURL, function (data) {
+      // Get the SVG tag, ignore the rest
+      var $svg = $(data).find("svg");
+
+      // Add replaced image's ID to the new SVG
+      if (typeof imgID !== "undefined") {
+        $svg = $svg.attr("id", imgID);
+      }
+      // Add replaced image's classes to the new SVG
+      if (typeof imgClass !== "undefined") {
+        $svg = $svg.attr("class", imgClass + " replaced-svg");
+      }
+
+      // Remove any invalid XML tags as per http://validator.w3.org
+      $svg = $svg.removeAttr("xmlns:a");
+
+      // Replace image with new SVG
+      $img.replaceWith($svg);
+    }, "xml");
+  });
+
+  var PrevNext = {
+    init: function init() {
+      APIDATA.getData(optionsAPI, function (response) {
+        PREVNEXT.render(response, options);
+      });
+    }
+  };
+
+  PrevNext.init();
+  
+  var headerCounter = 0;
+  
+ $(".article__body h1").each(function() { 
+ headerCounter++
+});
+
+   $(".article__body h2").each(function() { 
+ headerCounter++
+});
+ $(".article__body .wysiwyg-font-size-x-large").each(function() { 
+ headerCounter++
+});
+
+   $(".article__body .wysiwyg-font-size-large").each(function() { 
+ headerCounter++
+});
+  
+  if ($('[data-article-page]').length > 0 && (headerCounter > 1)) {
+    $('[data-article]').addClass('column');
+    TableOfContents.init();
+  }
+  
+  
+});
+
+},{}]},{},[1]);

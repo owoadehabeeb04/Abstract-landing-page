@@ -1,0 +1,302 @@
+(function() {
+
+  var debug = false;
+
+  var root = this;
+
+  var globalOptions = {
+    checkers: {
+      locale: getLocale(window.location.pathname),
+      timestamp: new Date().getTime()
+    },
+    urls: {
+      categories: '/api/v2/help_center/' + getLocale(window.location.pathname) + '/categories.json?per_page=90',
+      sections: '/api/v2/help_center/' + getLocale(window.location.pathname) + '/sections.json?per_page=90',
+      articles: '/api/v2/help_center/' + getLocale(window.location.pathname) + '/articles.json?per_page=90'
+    }
+  }
+
+  var APIDATA = function(obj) {
+    if (obj instanceof APIDATA) return obj;
+    if (!(this instanceof APIDATA)) return new APIDATA(obj);
+  };
+
+  if (typeof exports !== 'undefined') {
+    if (typeof module !== 'undefined' && module.exports) {
+      exports = module.exports = APIDATA;
+    }
+    exports.APIDATA = APIDATA;
+  } else {
+    root.APIDATA = APIDATA;
+  }
+
+
+  // public methods
+  APIDATA.getData = function(options, callback) {
+    if (debug) console.log('globalOptions', globalOptions);
+    if (debug) console.log('getData options recvd', options);
+
+    if (!options.hasOwnProperty('content')) return false;
+    if (!Array.isArray(options.content) || options.content.length == 0) return false;
+
+    var res = getStorageData(options);
+    if (!res || isNull(res)) {
+      if (debug) console.log('so, lets get data from API');
+      setGlobalContents(options.content);
+      getApiData(options, function() {
+        if (!isEmpty(globalOptions.apiData) && isFilled(globalOptions.apiData)) {
+          setStorageData(options.content, function(data) {
+            if (debug) console.log('api data is fully grabbed!');
+            if (debug) console.log('If true, then not error with lStorage, we rcvd:', data);
+            if (data) {
+              callback(getStorageData(options));
+            } else {
+              callback(globalOptions.apiData);
+            }
+          });
+        }
+      });
+    } else {
+      callback(res);
+    }
+  }
+
+
+  // private methods
+  function getStorageData(options) {
+    var checkers = globalOptions.checkers;
+
+    if (options.hasOwnProperty('checkers') && !isEmpty(options.checkers)) checkers = extendOptions(checkers, options.checkers);
+    if (!isActual(checkers)) return false;
+
+    var storageData = {};
+    options.content.forEach(function(item) {
+      if (debug) console.log('will query item from lStorage', item);
+      var lsItem = localStorage.getItem('hc_store:' + item.name);
+      storageData[item.name] = lsItem ? unpack(lsItem) : null;
+    });
+
+    return storageData;
+  }
+
+  function getApiData(options, callback) {
+    if (debug) console.log('getApiData rcvd', options);
+
+    var urls = globalOptions.urls;
+    if (options.hasOwnProperty('urls') && !isEmpty(options.urls)) urls = extendOptions(urls, options.urls);
+
+    if (debug) console.log('urls', urls);
+
+    for (var key in urls) {
+      options.content.forEach(function(item) {
+        if (key == item.name) {
+          var curKey = key;
+          queryApi(urls[key], function(result) {
+            if (result) {
+              if (debug) console.log('api response', result);
+              parseData(result, curKey, function() {
+                callback();
+              });
+            }
+          });
+        }
+      });
+    }
+  }
+
+  function setStorageData(options, callback) {
+    var obj = globalOptions.apiData;
+    for (var key in obj) {
+      if (debug) console.log('save data in storage', key);
+      var prepared = prepare(key, obj[key], options);
+      if (debug) console.log('prepared', prepared);
+      if (prepared) {
+        localStorage.setItem('hc_store:' + key, pack(prepared));
+        globalOptions.apiData[key] = prepared;
+      }
+    }
+    obj = globalOptions.checkers;
+    for (var propName in obj) {
+      localStorage.setItem('hc_store:' + propName, obj[propName]);
+    }
+    if (HelpCenter && HelpCenter.user.hasOwnProperty('role')) {
+      localStorage.setItem('hc_store:user_role', HelpCenter.user.role);
+    }
+    if (isStorageError(globalOptions.apiData)) {
+      callback(false);
+    } else {
+      callback(true);
+    }
+  }
+
+  function isStorageError(obj) {
+    for (var key in obj) {
+      var lsItem = localStorage.getItem('hc_store:' + key);
+      console.log('check availability lsItem', lsItem);
+      if (!lsItem) return true;
+    }
+    return false;
+  }
+
+  function prepare(contentType, arrVal, options) {
+    var uniqueArr = [],
+        keysStore = {},
+        prepared = [],
+        fields = [];
+
+    options.forEach(function(item) {
+      if (item.name == contentType) fields = item.fields;
+    });
+
+    var filteredArr = arrVal.filter(function(item) {
+      return !item.draft;
+    });
+
+    filteredArr.forEach(function(item) {
+      var key = item.id;
+      if (!keysStore.hasOwnProperty(key)) uniqueArr.push(item);
+      keysStore[key] = true;
+    });
+
+    if (fields.length > 0 && uniqueArr.length > 0) {
+      uniqueArr.forEach(function(item) {
+        var prepObj = {};
+        fields.forEach(function(param) {
+          prepObj[param] = item[param];
+        });
+        prepared.push(prepObj);
+      });
+    }
+    if (debug) console.log('arrVal', arrVal);
+    if (debug) console.log('fields', fields);
+    if (debug) console.log('filteredArr', filteredArr);
+    if (debug) console.log('keysStore', keysStore);
+    if (debug) console.log('uniqueArr', uniqueArr);
+    if (debug) console.log('prepared', prepared);
+
+    return (prepared.length > 0) ? prepared : false;
+  }
+
+  function parseData(result, contentType, callback) {
+    if (debug) console.log('contentType', contentType);
+    var data = JSON.parse(result);
+    if (data.count) globalOptions.apiData[contentType] = globalOptions.apiData[contentType].concat(data[contentType]);
+
+    if (data.next_page) queryApi(data.next_page, function(result) {
+      if (result) return parseData(result, contentType, callback);
+    });
+    if (!data.next_page) callback();
+  }
+
+  function queryApi(url, callback) {
+    if (debug) console.log('query url', url);
+    var XHR = "onload" in new XMLHttpRequest() ? XMLHttpRequest : XDomainRequest;
+    var xhr = new XHR();
+    xhr.open('GET', url , true);
+    xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest"); // ajax send
+    xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');
+    xhr.onreadystatechange = function () {
+      if (this.readyState != 4) return;
+      if (this.status != 200) {
+        callback();
+      }
+      callback(this.responseText);
+    };
+    xhr.send();
+  }
+
+  function setGlobalContents(contents) {
+    globalOptions.apiData = {};
+    contents.forEach(function(content) {
+      globalOptions.apiData[content.name] = [];
+    });
+    if (debug) console.log('setGlobalContents', globalOptions);
+  }
+
+  function isEmpty(obj) {
+    for (var key in obj) {
+      return false;
+    }
+    return true;
+  }
+
+  function isNull(obj) {
+    for (var key in obj) {
+      if (!obj[key]) return true;
+    }
+    return false;
+  }
+
+  function isFilled(obj) {
+    if (debug) console.log('is filled globalOpts API?', obj);
+    for (var key in obj) {
+      if (obj[key].length == 0) return false;
+    }
+    return true;
+  }
+
+  function isActual(obj) {
+    if (debug) console.log('check by checkers...');
+    if (debug) console.log('obj checkers', obj);
+    if (debug) console.log('HelpCenter var', HelpCenter);
+
+    if (HelpCenter && HelpCenter.user.hasOwnProperty('role')) {
+      var hcRole = HelpCenter.user.role,
+          lsRole = localStorage.getItem('hc_store:user_role');
+      if (debug) console.log('HelpCenter user role', hcRole);
+      if (debug) console.log('lsRole', lsRole);
+      if (!lsRole || (lsRole != hcRole && (lsRole == 'anonymous' || hcRole == 'anonymous'))) return false;
+    }
+
+    for (var key in obj) {
+      var lsVal = localStorage.getItem('hc_store:' + key);
+      if (lsVal) {
+        var obVal = obj[key];
+
+        if (debug) console.log('key lsVal', key + ' ' + lsVal);
+        if (debug) console.log('obVal', obVal);
+
+        if (key == 'timestamp') {
+          lsVal = +lsVal;
+          if ((obVal - lsVal) / 60 / 1000 > 60) return false; // more 60 min
+        } else {
+          if (lsVal != obVal) return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  function getLocale(url) {
+    var links = url.split('/'),
+        hcIndex = links.indexOf('hc'),
+        links2 = links[hcIndex + 1].split('?');
+    return links2[0];
+  }
+
+  function unpack(data) {
+    return JSON.parse(LZString.decompressFromUTF16(data));
+  }
+
+  function pack(data) {
+    return LZString.compressToUTF16(JSON.stringify(data));
+  }
+
+  function extendOptions(source, properties) {
+    var property;
+    for (property in properties) {
+      if (properties.hasOwnProperty(property)) {
+        source[property] = properties[property];
+      }
+    }
+    return source;
+  }
+
+
+  // option needed for install plugin via NPM, Bower, etc.
+  if (typeof define === 'function' && define.amd) {
+    define('apihelpdesk-js', [], function() {
+      return APIDATA;
+    });
+  }
+}.call(this));

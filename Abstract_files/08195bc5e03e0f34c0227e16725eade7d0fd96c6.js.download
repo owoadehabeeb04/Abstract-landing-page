@@ -1,0 +1,221 @@
+(function() {
+
+  var debug = true;
+
+  var root = this;
+
+  var globalOptions = {
+    content: 'articles',
+    showTitles: false,
+    className: 'prevnext',
+    classNameBtn: 'btn btn--primary',
+    insertPosition: 'beforeEnd'
+  }
+
+  var PREVNEXT = function(obj) {
+    if (obj instanceof PREVNEXT) return obj;
+    if (!(this instanceof PREVNEXT)) return new PREVNEXT(obj);
+  };
+
+  if (typeof exports !== 'undefined') {
+    if (typeof module !== 'undefined' && module.exports) {
+      exports = module.exports = PREVNEXT;
+    }
+    exports.PREVNEXT = PREVNEXT;
+  } else {
+    root.PREVNEXT = PREVNEXT;
+  }
+
+
+  // public methods
+  PREVNEXT.render = function(response, options) {
+    if (debug) console.log('response from APIDATA in prevnext', response);
+    if (debug) console.log('optionsPrevNext', options);
+
+    isCorrectOptions(options, response, function(warning) {
+      if (warning) {
+        console.log('ERROR: options PrevNext plugin is not Correct! ->', warning);
+      } else {
+        if (debug) console.log('options PrevNext plugin is correct');
+        extendOptions(globalOptions, options, function() {
+          if (debug) console.log('globalOptions extended', globalOptions);
+
+          var currentArticleId = getArticleId(),
+              currentSectionId = getSectionId();
+          if (debug) console.log('currentArticleId', currentArticleId);
+          if (debug) console.log('currentSectionId', currentSectionId);
+
+          if (currentArticleId) {
+            var divisions = [];
+            divisions.push(globalOptions.content);
+
+            if (debug) console.log('divisions', divisions);
+
+            var concatMenu = [];
+            for (var i = 0; i < divisions.length; i++) {
+              response[divisions[i]].forEach(function(item) {
+                item.divisionType = divisions[i];
+                if (item.id == currentSectionId || item.id == currentArticleId) {
+                  item.isActive = 'is-active ';
+                } else {
+                  item.isActive = '';
+                }
+              });
+              concatMenu = concatMenu.concat(response[divisions[i]]);
+            }
+            if (debug) console.log('concatMenu', concatMenu);
+
+            var elStore = {};
+            var preRender = concatMenu.reduce(function(res, current) {
+              if (!res.groups) res.groups = [];
+
+              if (!current.hasOwnProperty('section_id')) {
+                var id;
+                if (current.hasOwnProperty('category_id')) {
+                  id = current.category_id;
+                } else {
+                  id = current.id
+                }
+
+                if (!elStore[id]) {
+                  var el = {id: id, nested: []};
+                  res.groups.push(el);
+                  elStore[id] = el;
+                }
+
+                if (current.hasOwnProperty('category_id')) {
+                  elStore[id].nested.push(current);
+                } else {
+                  for (var key in current) {
+                    if (key != 'id') elStore[id][key] = current[key];
+                  }
+                }
+              } else {
+                if (isEmpty(elStore) || elStore['000']) {
+                  var id = '000';
+                  if (!elStore[id]) {
+                    var el = {id: id, nested: []};
+                    res.groups.push(el);
+                    elStore[id] = el;
+                  }
+                  if (current.section_id == currentSectionId) elStore[id].nested.push(current);
+                } else {
+                  for (var key in elStore) {
+                    elStore[key].nested.forEach(function(section, i) {
+                      if (current.section_id == section.id) {
+                        if (!elStore[key].nested[i].nested) elStore[key].nested[i].nested = [];
+                        elStore[key].nested[i].nested.push(current);
+                      }
+                    });
+                  }
+                }
+              }
+
+              return res;
+            }, {});
+
+            if (debug) console.log('preRender', preRender);
+
+            preRender.groups.forEach(function(group) {
+              group.nested.forEach(function(article, i) {
+                if (article.id == currentArticleId && article.section_id == currentSectionId) {
+                  if (i > 0 ) globalOptions.prevBtn = group.nested[i - 1];
+                  if (i < response.articles.length - 1) globalOptions.nextBtn = group.nested[i + 1];
+                }
+              });
+            });
+
+            parseTemplate();
+          } else {
+            if (debug) console.log('cannot grab current articleId');
+          }
+
+          if (!globalOptions.prevBtn && !globalOptions.nextBtn) {
+            $('.prevnext').addClass('is-hidden');
+          }
+        });
+      }
+    });
+  }
+
+
+  // private methods
+  function parseTemplate() {
+    if (debug) console.log('prevBtn', globalOptions.prevBtn);
+    if (debug) console.log('nextBtn', globalOptions.nextBtn);
+
+    var renderedPrevNext = '<div class="' + globalOptions.className + '">';
+    if (globalOptions.prevBtn) renderedPrevNext += '<div class="article-nav__element article-nav__element--prev"><a data-article-nav-prev="' + globalOptions.prevBtn.id + '" href="/hc/articles/' + globalOptions.prevBtn.id + '" class="' + globalOptions.classNameBtn + ' prev-next-btn prev-next-btn--prev"><span>Prev</span></a>';
+    if (globalOptions.prevBtn && globalOptions.showTitles) renderedPrevNext += '<span class="article-nav__title article-nav__title--prev" data-article-title-prev="' + globalOptions.prevBtn['title'] + '">' + globalOptions.prevBtn['title'] + '</span>';
+    if (globalOptions.prevBtn) renderedPrevNext += '</div>';
+    if (globalOptions.nextBtn) renderedPrevNext += '<div class="article-nav__element article-nav__element--next">';
+    if (globalOptions.nextBtn && globalOptions.showTitles) renderedPrevNext += '<span class="article-nav__title article-nav__title--next" data-article-title-next="' + globalOptions.nextBtn['title'] + '">' + globalOptions.nextBtn['title'] + '</span>';
+    if (globalOptions.nextBtn)
+    renderedPrevNext += '<a data-article-nav-next="' + globalOptions.nextBtn.id + '" href="/hc/articles/' + globalOptions.nextBtn.id + '" class="' + globalOptions.classNameBtn + ' prev-next-btn prev-next-btn--next"><span>Next</span></a>';
+    if (globalOptions.nextBtn) renderedPrevNext += '</div>';
+    renderedPrevNext += '</div>';
+
+    var parent = document.getElementById(globalOptions['el']) ? document.getElementById(globalOptions['el']) : document.querySelector(globalOptions['el']);
+    if (debug) console.log('globalOptions.el', parent);
+
+    parent.insertAdjacentHTML(globalOptions.insertPosition, renderedPrevNext);
+  }
+
+  function isCorrectOptions(options, response, callback) {
+    if (debug) console.log('globalOptions PrevNext', globalOptions);
+    if (debug) console.log('PrevNext options recvd', options);
+
+    if (!options.hasOwnProperty('el')) return callback('has not el');
+    if (!/^#(\w)|^\.(\w)/.test(options.el)) return callback('el has not id or class');
+
+    if (!response.hasOwnProperty(globalOptions.content)) return callback('has not division "' + globalOptions.content + '" in response ApiData, should query before render it');
+
+    return callback();
+  }
+
+  function extendOptions(source, properties, callback) {
+    var property;
+    for (property in properties) {
+      if (properties.hasOwnProperty(property)) {
+        source[property] = properties[property];
+        if (property == 'el' && /^#(\w)/.test(properties[property])) source.el = properties.el.replace('#', '');
+      }
+    }
+    return callback();
+  }
+
+  function getArticleId() {
+    if ($('[data-article-page]').length) {
+      return getPageId(window.location.href);
+    }
+  }
+
+  function getSectionId() {
+    if ($('[data-section-page]').length) {
+      return getPageId(window.location.href);
+    } else {
+      var sectionLink = $('.breadcrumbs li:nth-child(3) a');
+      return sectionLink.length ? getPageId(sectionLink.attr('href')) : null;
+    }
+  }
+
+  function getPageId(url) {
+    var links = url.split('/');
+    var result = links[links.length - 1];
+    return parseInt(result, 10) || null;
+  }
+
+  function isEmpty(obj) {
+    for (var key in obj) {
+      return false;
+    }
+    return true;
+  }
+
+  // option needed for install plugin via NPM, Bower, etc.
+  if (typeof define === 'function' && define.amd) {
+    define('prevnexthelpdesk-js', [], function() {
+      return PREVNEXT;
+    });
+  }
+}.call(this));

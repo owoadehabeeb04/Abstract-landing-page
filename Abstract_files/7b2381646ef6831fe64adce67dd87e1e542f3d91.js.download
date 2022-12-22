@@ -1,0 +1,239 @@
+function convertToSlug(s) {
+  return s
+    .toLowerCase()
+    .replace(/[^\w ]+/g, '')
+    .replace(/ +/g, '-');
+}
+
+var TableOfContents = {
+  init: function init(options) {
+    this.$window = $(window);
+    this.$document = $(document);
+    this.$topbar = $('[data-topbar]');
+    this.$page = $('[data-article-page]');
+    this.$content = $('[data-article]');
+
+    var defaultOptions = {
+      headers: 'h1:not(.article__title), h2, .wysiwyg-font-size-x-large, .wysiwyg-font-size-large',
+      page: this.$page,
+      content: this.$content
+    };
+
+    this.options = $.extend(defaultOptions, options);
+    this.$wrapper = this.options.content.parent();
+
+    this.updateClasses(this.$wrapper, this.options.content);
+    this.initElements();
+    this.initData();
+    this.createAnchors(this.options.headers);
+    this.createItems(this.anchors);
+    this.addClasses(this.css);
+    this.runScrollResize();
+    this.$window.on('scroll resize', $.proxy(this.runScrollResize, this));
+    this.makeActiveOnClick(this.$link);
+    if (this.$window.outerWidth() <= 767) {
+      this.toggleMobileClassOnClick(this.$toggle);
+    }
+  },
+  initElements: function () {
+    this.$box = $('<div />').appendTo(this.$wrapper);
+    this.$list = $('<ul />').appendTo(this.$box);
+    this.$toggle = $('<div />').show().prependTo(this.$list);
+  },
+  initData: function () {
+    this.data = {
+      anchor: 'data-anchor',
+      item: 'data-item'
+    };
+  },
+  initAmounts: function () {
+    this.TOPBAR_HEIGHT = this.$topbar.outerHeight();
+    this.ARTICLE_PADDING_TOP = parseInt(this.options.page.css('padding-top'));
+    this.SIDEBAR_PADDING_LEFT = parseInt(this.$box.css('padding-left'));
+    this.TRIGGER_OFFSET = 10;
+    this.WINDOW_TOP = this.$document.scrollTop();
+    this.BOX_HEIGHT = this.$wrapper.outerHeight();
+
+    if (this.$window.outerWidth() <= 767) {
+      this.$box.css('height', 'auto');
+      this.WINDOW_PADDING_TOP = this.TOPBAR_HEIGHT;
+      this.$list.addClass(this.css.mobile);
+    } else {
+      this.$box.css('height', this.BOX_HEIGHT);
+      this.WINDOW_PADDING_TOP = this.TOPBAR_HEIGHT + this.ARTICLE_PADDING_TOP;
+      this.$list.removeClass(this.css.mobile);
+    }
+
+    this.SIDEBAR_WIDTH = this.$box.outerWidth() - this.SIDEBAR_PADDING_LEFT;
+    this.SIDEBAR_HEIGHT = this.$list.outerHeight();
+    this.PARENT_TOP = this.$wrapper.offset().top - this.WINDOW_PADDING_TOP;
+    this.PARENT_BOTTOM = this.$wrapper.offset().top - this.WINDOW_PADDING_TOP + this.$wrapper.outerHeight();
+    this.STICKY_LIST_BOTTOM = this.WINDOW_TOP + this.SIDEBAR_HEIGHT;
+  },
+  createAnchors: function (h) {
+    var dataAnchor = this.data.anchor;
+
+    this.anchors = this.options.content
+      .find(h)
+      .map(function () {
+        var $this = $(this);
+        var header = $this.text().trim();
+        var slug = convertToSlug(header);
+
+        $this.before(
+          $('<a />', { id: slug }).attr(dataAnchor, slug)
+        );
+        return header;
+      })
+      .get();
+
+    this.$anchor = $('[' + this.data.anchor + ']');
+  },
+  createItems: function (a) {
+    for (var i = 0; i < a.length; i++) {
+      var anchor = a[i];
+      var anchorSlug = convertToSlug(anchor);
+
+      var $link = $('<a />', {
+        class: this.css.link,
+        href: '#' + anchorSlug,
+        html: anchor
+      });
+
+      $('<li />', {
+        class: this.css.item,
+        html: $link
+      })
+        .attr(this.data.item, anchorSlug)
+        .appendTo(this.$list);
+    }
+
+    this.$item = this.$list.find('li');
+    this.$link = this.$item.find('a');
+  },
+  updateClasses: function (w, c) {
+    var wEnd = '--wrapper';
+    var cEnd = '--content';
+    this.wClass = w.attr('class');
+    this.cClass = c.attr('class');
+    this.tocClass = 'table-of-contents';
+
+    this.css = {
+      wrapper: this.wClass += wEnd,
+      content: this.cClass += cEnd,
+      jsWrapper: 'js' + wEnd,
+      jsContent: 'js' + cEnd,
+      box: this.tocClass,
+      list: this.tocClass + '__list',
+      item: this.tocClass + '__item',
+      link: this.tocClass + '__link',
+      toggle: this.tocClass + '__toggle',
+      active: 'is-active',
+      hidden: 'is-hidden',
+      mobile: 'is-mobile',
+      fixed: 'is-fixed',
+      opened: 'is-opened'
+    };
+  },
+  addClasses: function (c) {
+    this.$wrapper.addClass(c.wrapper + ' ' + c.jsWrapper);
+    this.options.content.addClass(c.content + ' ' + c.jsContent);
+    this.$box.addClass(c.box);
+    this.$list.addClass(c.list);
+    this.$toggle.addClass(c.toggle);
+    this.$item.first().addClass('is-active');
+  },
+  attachTOC: function (l) {
+    if (this.WINDOW_TOP >= this.PARENT_TOP) {
+      l
+        .removeAttr('style')
+        .css({
+          position: 'fixed',
+          top: this.WINDOW_PADDING_TOP + 'px',
+          width: this.SIDEBAR_WIDTH
+        })
+        .addClass(this.css.fixed);
+    } else {
+      l.removeAttr('style').removeClass(this.css.fixed);
+    }
+  },
+  detachTOC: function (l) {
+    if (this.STICKY_LIST_BOTTOM >= this.PARENT_BOTTOM) {
+      l
+        .removeAttr('style')
+        .css({
+          position: 'absolute',
+          width: this.SIDEBAR_WIDTH,
+          top: 'auto',
+          bottom: '0px'
+        })
+        .addClass(this.css.fixed);
+    }
+  },
+  makeActiveOnScroll: function (a) {
+    if (this.WINDOW_TOP >= this.PARENT_TOP) {
+      var da = this.data.anchor;
+      var di = this.data.item;
+      var wt = this.WINDOW_TOP;
+      var th = this.TOPBAR_HEIGHT;
+      var to = this.TRIGGER_OFFSET;
+      var i = this.$item;
+
+      a.each(function () {
+        var $this = $(this);
+        var articleId = $this.attr(da);
+        if ($this.offset().top <= wt + th + to) {
+          i.removeClass('is-active');
+          $('[' + di + '=' + articleId + ']').addClass('is-active');
+        }
+      });
+    } else {
+      this.$item.removeClass('is-active');
+      this.$item.first().addClass('is-active');
+    }
+  },
+  runScrollResize: function () {
+    this.initAmounts();
+    this.attachTOC(this.$list);
+    this.detachTOC(this.$list);
+    this.makeActiveOnScroll(this.$anchor);
+  },
+  makeActiveOnClick: function (l) {
+    var da = this.data.anchor;
+    var di = this.data.item;
+    var th = this.TOPBAR_HEIGHT;
+
+    l.on('click', function (e) {
+      e.preventDefault();
+
+      var $this = $(this).parent().attr(di);
+      var articleItem = $('[' + da + '=' + $this + ']').offset().top - th;
+
+      $('body,html').animate(
+        {
+          scrollTop: articleItem
+        },
+        500
+      );
+
+
+      if (history.pushState) {
+        history.pushState(null, null, $(this).attr('href'));
+      }
+      else {
+        location.hash = $(this).attr('href');
+      }
+
+      //window.location.hash = $(this).attr('href');
+
+      return false;
+    });
+  },
+  toggleMobileClassOnClick: function (t) {
+    t.add(this.$link).on('click', $.proxy(function () {
+      t.toggleClass('is-hidden');
+      console.log(this.$list);
+      this.$list.toggleClass('is-opened');
+    }, this));
+  }
+};  
